@@ -5,7 +5,11 @@ __author__ = 'Marios Keri'
 
 class Ipv4:
     def __init__(self):
-        self._output = subprocess.check_output(['lsof', '-i', '4'])
+        try:
+            self._output = subprocess.check_output(['lsof', '-i', '4'])
+        except Exception:
+            assert Exception
+
         self._dirty = self._output.split(b'\n')
         self._clean = []
         self.connections = set()
@@ -39,7 +43,10 @@ class Ipv4:
         return(self.internal_ips)
 
     def get_external_ip(self):
-        return(self.connected_to)
+        ips = set()
+        for i in self.connected_to:
+            ips.add(i.split(':')[0])
+        return ips
 
     def get_connection_type(self):
         return(self.connection_type)
@@ -48,9 +55,43 @@ class Ipv4:
         return(self.connections)
 
 
+class Nslookup:
+    def __init__(self, ip):
+        try:
+            self._output = subprocess.check_output(['nslookup', f'{ip.strip()}'])
+        except subprocess.CalledProcessError:
+            assert ValueError
+
+        self._output = str(self._output)
+        self._output = self._output[1: ]
+        self._output = self._output.replace('\\t', '')
+        self._output = self._output.split('\\n')
+        self._organized = {}
+
+        for x in self._output:
+            if len(x.split(':')) == 2:
+                k, v = x.split(':')
+                self._organized[k] = v
+
+    def get_name(self):
+        return self._organized['Name']
+
+    def get_server(self):
+        return self._organized['Server']
+
+    def get_address(self):
+        return self._organized['Address']
+
+
 if __name__ == '__main__':
-    ip = Ipv4()
-    print('Type of connections           ', ip.get_connection_type())
-    print('Internal->External connections', ip.get_connections())
-    print('External ip                   ', ip.get_external_ip())
-    print('Internal ip                   ', ip.get_internal_ip())
+    my_connections = Ipv4()
+    connected = my_connections.get_external_ip()
+
+    for ip in connected:
+        try:
+            ns = Nslookup(ip)
+            print(ns.get_address(), '  ', ns.get_name())
+        except Exception:
+            pass
+
+
