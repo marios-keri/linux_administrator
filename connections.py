@@ -91,7 +91,7 @@ if __name__ == '__main__':
         try:
             ns = Nslookup(ip)
             print(ns.get_address(), '  ', ns.get_name())
-        except Exception:
+        except ValueError:
             pass
 
 
